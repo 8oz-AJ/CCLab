@@ -6,7 +6,7 @@ CCLaboratories Biodiversity Atlas
 */
 
 body {
-    background-color: gray;
+    background-color: rgb(19, 19, 28);
     color: rgb(255, 255, 255);
     font-family: 'Courier New', Courier, monospace;
     font-size: 1em;
@@ -19,6 +19,7 @@ body {
 }
 
 .headline {
+    color: darkblue;
     font-size: 3em;
     font-family: Georgia, 'Times New Roman', Times, serif;
     font-weight: 600;
