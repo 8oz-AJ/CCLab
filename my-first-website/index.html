@@ -1,15 +1,225 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AJ's Website</title>
+    <meta charset="utf-8" />
+    <title>Dancing Spider — 200x200</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- p5.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
+    <style>
+        /* center the canvas on the page */
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            border: 6px solid #222;
+            border-radius: 6px;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>hello this is cclab website</h1>
-    <p>The fuck you looking at???</p>
+    <script>
+        /*
+          Dancing Spider (200x200 canvas)
+          - Object-oriented: class Spider
+          - Uses sin() and cos() to animate body bob and leg swings
+          - Author: ChatGPT
+        */
+
+        let spider;
+
+        function setup() {
+            // create a 200x200 canvas
+            createCanvas(200, 200);
+            // crisp drawing
+            pixelDensity(1);
+            // center coordinates for spider
+            spider = new Spider(width / 2, height / 2 + 6, 1.0); // slight lower so legs fit
+            noStroke();
+        }
+
+        function draw() {
+            background(18, 20, 26); // dark background
+            // subtle vignette / ground shadow
+            push();
+            translate(0, 0);
+            noStroke();
+            fill(0, 0, 0, 30);
+            ellipse(width / 2, height - 8, 140, 18);
+            pop();
+
+            // update with current time (seconds)
+            let t = millis() / 1000;
+            spider.update(t);
+            spider.draw();
+        }
+
+        /*
+          Spider class
+          - x,y = center position
+          - sizeScale = scale factor (1 => default)
+          - legs are drawn as 2-segment stylized lines, each with its own phase offset
+        */
+        class Spider {
+            constructor(x, y, sizeScale = 1) {
+                this.x = x;
+                this.y = y;
+                this.s = constrain(sizeScale, 0.2, 4);
+
+                // body sizes (based on scale)
+                this.bodyRadius = 18 * this.s;
+                this.headRadius = 10 * this.s;
+
+                // leg config
+                this.legCount = 8; // spider legs
+                this.legSpacing = PI / 6; // base spread between legs
+                this.legBaseLength = 28 * this.s;
+                this.legSecondLength = 18 * this.s;
+
+                // unique phase offsets for legs so they don't move identically
+                this.legPhases = [];
+                for (let i = 0; i < this.legCount; i++) {
+                    this.legPhases.push(random(0, TWO_PI));
+                }
+
+                // dance parameters
+                this.bobAmp = 4 * this.s;       // vertical body bob amplitude
+                this.bobFreq = 2.2;            // bob frequency (Hz)
+                this.legSwingAmp = PI / 7 * this.s; // swing amplitude per leg
+                this.legFreq = 2.2;            // leg swing frequency (Hz), synced to bob
+                this.swayAmp = 0.08;           // slight rotation sway
+            }
+
+            update(t) {
+                // t is time in seconds
+                this.time = t;
+                // body bob using sine
+                this.bob = sin(TWO_PI * this.bobFreq * t) * this.bobAmp;
+
+                // small body sway rotation
+                this.sway = sin(TWO_PI * this.bobFreq * t * 0.5) * this.swayAmp;
+
+                // leg angles base are computed within draw to use phases
+            }
+
+            draw() {
+                push();
+                translate(this.x, this.y + this.bob); // bob vertically
+                rotate(this.sway); // slight sway rotation
+
+                // Draw legs behind body (so legs appear under and over depending)
+                this._drawLegs(back = true);
+
+                // body
+                fill(30, 120, 50); // subtle greenish-black body (stylized)
+                stroke(8, 8, 8);
+                strokeWeight(1);
+                ellipse(0, 0, this.bodyRadius * 2, this.bodyRadius * 2); // abdomen
+
+                // head
+                fill(20, 20, 20);
+                noStroke();
+                ellipse(-this.bodyRadius * 0.55, -this.bodyRadius * 0.25, this.headRadius * 2, this.headRadius * 2);
+
+                // eyes (two big shiny eyes)
+                fill(255);
+                ellipse(-this.bodyRadius * 0.75, -this.bodyRadius * 0.45, 5 * this.s, 5 * this.s);
+                ellipse(-this.bodyRadius * 0.55, -this.bodyRadius * 0.5, 4 * this.s, 4 * this.s);
+                fill(0);
+                ellipse(-this.bodyRadius * 0.75, -this.bodyRadius * 0.45, 2 * this.s, 2 * this.s);
+                ellipse(-this.bodyRadius * 0.55, -this.bodyRadius * 0.5, 1.5 * this.s, 1.5 * this.s);
+
+                // small highlight on abdomen
+                fill(255, 50);
+                noStroke();
+                ellipse(this.bodyRadius * 0.25, -this.bodyRadius * 0.25, this.bodyRadius * 0.6, this.bodyRadius * 0.4);
+
+                // Draw legs in front (so they overlap properly)
+                this._drawLegs(back = false);
+
+                pop();
+            }
+
+            _drawLegs({ back = false } = {}) {
+                // legs on left and right: 4 each side
+                // draw order: back legs (slightly behind body) vs front legs (in front)
+                stroke(32, 32, 32);
+                strokeWeight(2 * this.s);
+                strokeCap(ROUND);
+
+                for (let i = 0; i < this.legCount; i++) {
+                    // decide side and index on side
+                    let side = (i < this.legCount / 2) ? -1 : 1; // -1 left, +1 right
+                    let idxOnSide = (i < this.legCount / 2) ? i : i - this.legCount / 2;
+
+                    // choose which are back legs: the two backmost on each side (higher idxOnSide)
+                    let isBackLeg = idxOnSide >= 2;
+
+                    if (back !== isBackLeg) continue; // filter by requested group
+
+                    // base angle from body (spread from rear to front)
+                    // left side angles are mirrored
+                    let base = map(idxOnSide, 0, (this.legCount / 2) - 1, -PI / 3, PI / 3);
+                    base = side * (PI / 2 - base); // rotate to point outward from body
+
+                    // dynamic swing using sin and per-leg phase
+                    let phase = this.legPhases[i];
+                    let swing = sin(TWO_PI * this.legFreq * this.time + phase) * this.legSwingAmp;
+
+                    // some legs move with opposite phase for variety
+                    if (idxOnSide % 2 === 0) swing *= -1;
+
+                    // final angles for two segments
+                    let angle1 = base + swing * 0.7;
+                    let angle2 = angle1 + (sin(TWO_PI * this.legFreq * this.time + phase + 1.0) * 0.25);
+
+                    // compute joint points
+                    let x0 = -this.bodyRadius * 0.6 * side; // offset base x near head/side of body
+                    let y0 = -this.bodyRadius * 0.15; // slight vertical offset so legs connect at mid-body
+
+                    // first segment end
+                    let x1 = x0 + cos(angle1) * this.legBaseLength;
+                    let y1 = y0 + sin(angle1) * this.legBaseLength;
+
+                    // second segment end (tip)
+                    let x2 = x1 + cos(angle2) * this.legSecondLength;
+                    let y2 = y1 + sin(angle2) * this.legSecondLength;
+
+                    // lighter stroke for back legs
+                    if (isBackLeg) strokeWeight(1.6 * this.s); else strokeWeight(2.6 * this.s);
+
+                    // draw two-segment leg with slight tapering by drawing multiple lines
+                    // thicker near body
+                    this._drawSegment(x0, y0, x1, y1, 2.4 * this.s, 0.9 * (isBackLeg ? 1 : 1.1));
+                    // thinner near tip
+                    this._drawSegment(x1, y1, x2, y2, 1.4 * this.s, 0.6);
+                }
+            }
+
+            _drawSegment(xa, ya, xb, yb, weight, opacityMult) {
+                push();
+                stroke(20, 20, 20, 255 * opacityMult);
+                strokeWeight(weight);
+                line(xa, ya, xb, yb);
+                // tiny claw / tip dot
+                noStroke();
+                fill(12, 12, 12, 255 * opacityMult);
+                ellipse(xb, yb, max(1.6 * this.s, weight * 0.8), max(1.6 * this.s, weight * 0.8));
+                pop();
+            }
+        }
+
+    </script>
 </body>
 
 </html>
