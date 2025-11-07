@@ -17,6 +17,9 @@ function draw() {
     clouds[i].move()
     clouds[i].display()
   }
+  if (mouseIsPressed) {
+    clouds.push(new Cloud(mouseX, mouseY, random(50, 200)))
+  }
 }
 
 class Cloud {
